@@ -113,13 +113,20 @@ export async function chatCompletions(c: Context) {
         await streamWriter.write(`data: ${JSON.stringify(data)}\n\n`);
       };
 
+      const makeChoice = (delta: any, finishReason: string | null = null) => ({
+        index: 0,
+        delta,
+        logprobs: null,
+        finish_reason: finishReason
+      });
+
       // Send initial chunk
       await writeEvent({
         id: completionId,
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
         model: body.model,
-        choices: [{ index: 0, delta: { role: 'assistant' } }]
+        choices: [makeChoice({ role: 'assistant', content: '' })]
       });
 
       const reader = stream.getReader();
@@ -201,6 +208,8 @@ export async function chatCompletions(c: Context) {
             }
 
             if (foundStr && vStr !== '') {
+              if (vStr === 'FINISHED') continue;
+
               const delta: ChoiceDelta = {};
               
               // Map chunk to either reasoning_content or content
@@ -214,7 +223,7 @@ export async function chatCompletions(c: Context) {
                   object: 'chat.completion.chunk',
                   created: Math.floor(Date.now() / 1000),
                   model: body.model,
-                  choices: [{ index: 0, delta: delta, finish_reason: null }]
+                  choices: [makeChoice(delta)]
                 });
               } else {
                 inThinkingState = false;
@@ -232,7 +241,7 @@ export async function chatCompletions(c: Context) {
                           object: 'chat.completion.chunk',
                           created: Math.floor(Date.now() / 1000),
                           model: body.model,
-                          choices: [{ index: 0, delta: { content: textToEmit }, finish_reason: null }]
+                          choices: [makeChoice({ content: textToEmit })]
                         });
                       }
                       insideTool = true;
@@ -255,7 +264,7 @@ export async function chatCompletions(c: Context) {
                           object: 'chat.completion.chunk',
                           created: Math.floor(Date.now() / 1000),
                           model: body.model,
-                          choices: [{ index: 0, delta: { content: textToEmit }, finish_reason: null }]
+                          choices: [makeChoice({ content: textToEmit })]
                         });
                       }
                       contentEmitBuffer = contentEmitBuffer.substring(flushIndex);
@@ -283,23 +292,19 @@ export async function chatCompletions(c: Context) {
                           object: 'chat.completion.chunk',
                           created: Math.floor(Date.now() / 1000),
                           model: body.model,
-                          choices: [{
-                            index: 0,
-                            delta: {
-                              tool_calls: [{
-                                index: emittedToolCallCount,
-                                id: toolId,
-                                type: 'function',
-                                function: {
-                                  name: toolCallObj.name || '',
-                                  arguments: typeof toolCallObj.arguments === 'object'
-                                    ? JSON.stringify(toolCallObj.arguments)
-                                    : String(toolCallObj.arguments || '')
-                                }
-                              }]
-                            },
-                            finish_reason: null
-                          }]
+                          choices: [makeChoice({
+                            tool_calls: [{
+                              index: emittedToolCallCount,
+                              id: toolId,
+                              type: 'function',
+                              function: {
+                                name: toolCallObj.name || '',
+                                arguments: typeof toolCallObj.arguments === 'object'
+                                  ? JSON.stringify(toolCallObj.arguments)
+                                  : String(toolCallObj.arguments || '')
+                              }
+                            }]
+                          })]
                         });
                         emittedToolCallCount++;
                       } catch (e) {
@@ -310,7 +315,7 @@ export async function chatCompletions(c: Context) {
                             object: 'chat.completion.chunk',
                             created: Math.floor(Date.now() / 1000),
                             model: body.model,
-                            choices: [{ index: 0, delta: { content: TOOL_START + toolJsonStr + TOOL_END }, finish_reason: null }]
+                            choices: [makeChoice({ content: TOOL_START + toolJsonStr + TOOL_END })]
                           });
                         }
                       }
@@ -338,7 +343,7 @@ export async function chatCompletions(c: Context) {
           object: 'chat.completion.chunk',
           created: Math.floor(Date.now() / 1000),
           model: body.model,
-          choices: [{ index: 0, delta: { content: contentEmitBuffer }, finish_reason: null }]
+          choices: [makeChoice({ content: contentEmitBuffer })]
         });
       }
   
@@ -359,11 +364,7 @@ export async function chatCompletions(c: Context) {
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
         model: body.model,
-        choices: [{
-          index: 0,
-          delta: {},
-          finish_reason: finalFinishReason
-        }],
+        choices: [makeChoice({}, finalFinishReason)],
         usage: usage
       });
       await streamWriter.write('data: [DONE]\n\n');
