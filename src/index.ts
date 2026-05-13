@@ -21,6 +21,19 @@ export const app = new Hono();
 
 app.use('*', cors());
 
+app.use('*', async (c, next) => {
+  const apiKey = process.env.API_KEY;
+  if (apiKey) {
+    const authHeader = c.req.header('Authorization');
+    const xApiKey = c.req.header('X-API-Key');
+    const providedKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : xApiKey;
+    if (!providedKey || providedKey !== apiKey) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+  }
+  await next();
+});
+
 // Basic health check
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
