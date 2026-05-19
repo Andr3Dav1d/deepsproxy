@@ -8,3 +8,4 @@ deepseek_profile/
 coverage/
 .cache/
 .kilo
+start-deepsproxy.sh
