@@ -360,14 +360,16 @@ services:
   deepsproxy:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
-      - PORT=3000
-      - PLAYWRIGHT_HEADLESS=true
+      PORT: ${PORT:-3000}
+      API_KEY: ${API_KEY:-}
     volumes:
       - ./deepseek_profile:/app/deepseek_profile
     restart: unless-stopped
 ```
+
+No Portainer, use este arquivo como Stack e defina as variáveis `PORT` e `API_KEY` na seção de environment da Stack. Se `API_KEY` ficar vazia, a autenticação permanece desativada.
 
 ### Build e Execução
 
