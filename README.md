@@ -369,7 +369,7 @@ services:
     restart: unless-stopped
 ```
 
-No Portainer, use este arquivo como Stack e defina as variáveis `PORT` e `API_KEY` na seção de environment da Stack. Se `API_KEY` ficar vazia, a autenticação permanece desativada.
+No Portainer, use este arquivo como Stack e defina as variáveis `PORT` e `API_KEY` na seção de environment da Stack. **Aviso de segurança:** se `API_KEY` ficar vazia, a autenticação permanecerá desativada e o serviço ficará exposto sem autenticação por padrão. Se a porta estiver publicada em uma interface pública, qualquer cliente com acesso à rede poderá usar a API; portanto, defina uma `API_KEY` antes de expor o serviço.
 
 ### Build e Execução
 
